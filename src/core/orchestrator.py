@@ -1,22 +1,20 @@
 """
-Hermes Automation Engine — Main Orchestrator
-Modular design for future multi-platform support (WordPress, Ghost, etc.)
+Hermes Nail Mood Engine — Full Pipeline with Publish
 """
-import asyncio
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from src.modules.keyword_research import KeywordResearcher
+from src.modules.keyword_research import KeywordResearcher, SEOPlan
 from src.modules.article_generator import ArticleWriter
 from src.core.token_optimizer import ImageAssetResolver
 from src.modules.pinterest_generator import PinterestAssetCreator
-from src.modules.blogger_publisher import BloggerHTMLGenerator
+from src.modules.blogger_publisher import BloggerPublisher
 from src.utils.logger import get_logger
 from src.utils.file_handler import load_yaml
 
-log = get_logger("orchestrator")
+log = get_logger("engine")
 
 
 class NailMoodEngine:
@@ -25,55 +23,57 @@ class NailMoodEngine:
         self.project_root = config.get("project_root", ".")
         self.image_resolver = ImageAssetResolver(self.project_root)
 
-    async def run_pipeline(self, topic: str) -> dict:
-        log.info(f"Pipeline start: {topic}")
-
-        # STEP 1-2: Keyword & SEO Planning
-        seo_plan = await KeywordResearcher().generate_plan(topic)
-        log.info(f"SEO plan: {seo_plan.primary_keyword}")
-
-        # STEP 3: Article Generation (Human-sounding, EEAT)
-        article = await ArticleWriter().write(
-            seo_plan=seo_plan,
-            style="natural_pinterest_friendly",
-            word_count=(1500, 2500),
-        )
-        log.info(f"Article: {article.title}")
-
-        # STEP 4: Smart Image Pipeline (Token Optimized)
-        images = []
-        for img_context in article.required_images:
-            resolved = await self.image_resolver.resolve_image(
-                keyword=seo_plan.primary_keyword,
-                context=img_context,
-            )
-            images.append(resolved)
-        log.info(f"Images resolved: {len(images)} (AI used: {sum(1 for i in images if i.get('ai_used'))})")
-
-        # STEP 5-6: Pinterest Pins & Shopee Recommendations
-        pins = PinterestAssetCreator().create_pins(article, images)
-        log.info(f"Pins created: {len(pins)}")
-
-        # STEP 7-9: SEO Schema & Blogger HTML
-        publisher = BloggerHTMLGenerator()
-        html_package = publisher.build(
-            article=article,
-            images=images,
-            pins=pins,
-            schema_type="FAQPage",
-        )
-
-        # STEP 10: Export
-        result = publisher.export(html_package)
-        log.info(f"Exported: {result['path']}")
-        return result
+    def run_pipeline(self, topic: str, max_articles: int = 1, publish: bool = True) -> list:
+        results = []
+        
+        for i in range(max_articles):
+            log.info(f"Article {i+1}/{max_articles}: {topic}")
+            
+            # STEP 1-2: Keywords
+            seo_plan = KeywordResearcher().generate_plan(topic)
+            log.info(f"  Keywords: {seo_plan.secondary_keywords[:3]}...")
+            
+            # STEP 3: Article
+            article = ArticleWriter().write(seo_plan)
+            if article.title == "Error":
+                log.warning("  Article generation failed, skipping")
+                continue
+            log.info(f"  Title: {article.title}")
+            
+            # STEP 4: Image resolution
+            images = []
+            for ctx in article.required_images:
+                resolved = self.image_resolver.resolve_image(seo_plan.primary_keyword, ctx)
+                images.append(resolved)
+            
+            # STEP 5-6: Pinterest + Shopee (placeholder)
+            pins = PinterestAssetCreator().create_pins(article, images)
+            
+            # STEP 7-8: SEO schema
+            # (built into article via H2/FAQ structure)
+            
+            # STEP 9-10: Publish
+            result = {"title": article.title, "words": len(article.content_html.split())}
+            if publish:
+                labels = [l.strip().title() for l in seo_plan.secondary_keywords[:3]]
+                labels += [article.title.split(":")[0].strip() if ":" in article.title else "Nail Tips"]
+                pub = BloggerPublisher().publish(article, labels=labels)
+                result.update(pub)
+                log.info(f"  Published: {pub.get('url', 'FAILED')}")
+            else:
+                result["status"] = "draft"
+            
+            results.append(result)
+        
+        return results
 
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Nail Mood ID Engine")
-    parser.add_argument("--topic", required=True, help="Main topic")
-    parser.add_argument("--max", type=int, default=1, help="Max articles")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--topic", required=True)
+    parser.add_argument("--max", type=int, default=1)
+    parser.add_argument("--no-publish", action="store_true")
     args = parser.parse_args()
 
     config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "settings.yaml")
@@ -81,5 +81,8 @@ if __name__ == "__main__":
     config["project_root"] = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
     engine = NailMoodEngine(config)
-    result = asyncio.run(engine.run_pipeline(args.topic))
-    print(f"Done: {result}")
+    results = engine.run_pipeline(args.topic, max_articles=args.max, publish=not args.no_publish)
+    print(f"\nDone: {len(results)} articles")
+    for r in results:
+        url = r.get("url", "N/A")
+        print(f"  {r['title'][:60]} -> {url}")

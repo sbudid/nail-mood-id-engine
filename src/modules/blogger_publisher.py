@@ -1,38 +1,40 @@
-"""Step 9 & 10: Blogger HTML Generator + Publisher."""
-from src.modules.article_generator import Article
-from src.modules.seo_enhancer import SEOEnhancer
+"""Step 9 & 10: Blogger Publisher via API."""
+import os
+import sys
+import json
+import requests
+import datetime
 
-class BloggerHTMLGenerator:
-    def build(self, article: Article, images: list, pins: list, schema_type: str = "FAQPage") -> dict:
-        seo = SEOEnhancer()
-        faq_schema = seo.build_faq_schema(article) if schema_type == "FAQPage" else ""
-        meta_tags = seo.build_meta_tags(article)
+sys.path.insert(0, "/home/ubuntu/autoblog-bumil")
+from auto_blog import get_blogger_token
 
-        html = f"""<!DOCTYPE html>
-<html>
-<head>
-  {meta_tags}
-  <script type="application/ld+json">{faq_schema}</script>
-</head>
-<body>
-  <article>
-    {article.content_html}
-  </article>
-</body>
-</html>"""
 
-        return {
-            "html": html,
+class BloggerPublisher:
+    def __init__(self, blog_id: str = ""):
+        self.blog_id = blog_id or os.getenv("BLOGGER_BLOG_ID", "4276182482507605794")
+
+    def publish(self, article, labels: list = None) -> dict:
+        """Publish article to Blogger. Returns post info."""
+        token = get_blogger_token()
+        
+        post = {
+            "kind": "blogger#post",
+            "blog": {"id": self.blog_id},
             "title": article.title,
-            "images": images,
-            "pins": pins,
-            "faq_schema": faq_schema,
+            "content": article.content_html,
+            "labels": labels or ["Nail Art", "Tips Kuku"],
+            "status": "LIVE",
         }
-
-    def export(self, package: dict, output_dir: str = "data/Published"):
-        import os
-        os.makedirs(output_dir, exist_ok=True)
-        filename = package["title"].lower().replace(" ", "-")[:50]
-        with open(os.path.join(output_dir, f"{filename}.html"), "w", encoding="utf-8") as f:
-            f.write(package["html"])
-        return {"status": "exported", "path": f"{output_dir}/{filename}.html"}
+        
+        resp = requests.post(
+            f"https://www.googleapis.com/blogger/v3/blogs/{self.blog_id}/posts",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=post,
+            timeout=30,
+        )
+        
+        if resp.status_code == 200:
+            data = resp.json()
+            return {"success": True, "id": data["id"], "url": data["url"]}
+        else:
+            return {"success": False, "error": resp.text[:200]}
