@@ -1,0 +1,24 @@
+# Global Configuration — Nail Mood ID Engine
+project_name: nail-mood-id
+blog_url: https://nailmoodid.blogspot.com
+language: id
+max_articles_per_run: 3
+
+image_priority:
+  - existing        # data/Images/existing/
+  - free_stock      # Unsplash / Pexels
+  - shopee          # Affiliate product images
+  - ai_generated    # Fallback only
+
+pinterest:
+  pin_size: 1000x1500
+  max_pins_per_article: 2
+
+shopee:
+  affiliate_id: ""
+  disclaimer: "Disclaimer: Artikel ini mengandung link afiliasi Shopee. Kami mendapat komisi kecil jika Anda membeli melalui link tersebut tanpa biaya tambahan untuk Anda."
+
+seo:
+  word_count_min: 1500
+  word_count_max: 2500
+  schema_type: FAQPage

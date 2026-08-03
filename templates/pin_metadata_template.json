@@ -1,0 +1,14 @@
+{
+  "pin_template": {
+    "title": "{{ title | truncate(100) }}",
+    "description": "{{ meta_description | truncate(500) }}",
+    "image": "{{ image_url }}",
+    "destination": "{{ article_url }}",
+    "board": "{{ board_name }}"
+  },
+  "constraints": {
+    "destination_must_be_article_slug": true,
+    "never_link_to_affiliate_directly": true,
+    "max_pins_per_article": 2
+  }
+}

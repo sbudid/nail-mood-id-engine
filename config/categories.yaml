@@ -1,0 +1,14 @@
+# Content Categories — Nail Mood ID
+categories:
+  - name: Gel Nails
+    slug: gel-nails
+    keywords: [gel nails, kutek gel, gel polish, kuku gel]
+  - name: Nail Art
+    slug: nail-art
+    keywords: [nail art, seni kuku, desain kuku, nail design]
+  - name: Nail Care
+    slug: nail-care
+    keywords: [perawatan kuku, nail care, kuku sehat, nail health]
+  - name: Nail Trends
+    slug: nail-trends
+    keywords: [tren kuku 2026, nail trends, kuku terbaru]

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{{ meta_description }}">
+  <meta property="og:title" content="{{ title }}">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="{{ hero_image }}">
+  {{ faq_schema }}
+  <title>{{ title }}</title>
+  <style>
+    body { font-family: 'Georgia', serif; max-width: 720px; margin: 0 auto; padding: 20px; line-height: 1.7; }
+    h2 { color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; }
+    img { max-width: 100%; height: auto; border-radius: 8px; margin: 16px 0; }
+    .faq { background: #f9f9f9; padding: 16px; border-radius: 8px; margin-top: 24px; }
+    .affiliate-notice { background: #fff3cd; padding: 12px; border-left: 4px solid #ffc107; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>{{ title }}</h1>
+  {{ content }}
+  {{ affiliate_section }}
+  {{ shopee_disclaimer }}
+</body>
+</html>
