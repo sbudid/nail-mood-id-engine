@@ -103,7 +103,7 @@ JANGAN: "ditulis oleh", code block, markdown."""
                 "max_tokens": 8000,
                 "temperature": 0.7,
                 "stream": False
-            }, headers={"Authorization": f"Bearer {ROUTER_KEY}", "Content-Type": "application/json"}, timeout=300)
+            }, headers={"Authorization": f"Bearer {ROUTER_KEY}", "Content-Type": "application/json"}, timeout=480)
             
             data = resp.json()
             msg = data["choices"][0]["message"]
