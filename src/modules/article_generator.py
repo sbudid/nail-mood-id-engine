@@ -1,10 +1,38 @@
-"""Step 3: Article Generation via 9Router Mode3."""
+"""Step 3: Article Generation via 9Router Mode3 — with images + affiliate."""
 from dataclasses import dataclass, field
 from typing import List
 import re
 import requests
 import os
 from src.modules.keyword_research import SEOPlan, ROUTER_URL, ROUTER_KEY
+
+# Shopee affiliate links — nail niche
+AFFILIATE_LINKS = {
+    "press on nails": "https://shopee.co.id/search?keyword=press+on+nails&af_id=SBUDID",
+    "gel nails": "https://shopee.co.id/search?keyword=gel+nails+kit&af_id=SBUDID",
+    "cat kuku": "https://shopee.co.id/search?keyword=cat+kuku+gel&af_id=SBUDID",
+    "kutek gel": "https://shopee.co.id/search?keyword=kutek+gel&af_id=SBUDID",
+    "nail art": "https://shopee.co.id/search?keyword=alat+nail+art&af_id=SBUDID",
+    "nail sticker": "https://shopee.co.id/search?keyword=nail+sticker&af_id=SBUDID",
+    "nail lamp": "https://shopee.co.id/search?keyword=nail+uv+lamp&af_id=SBUDID",
+    "manicure": "https://shopee.co.id/search?keyword=manicure+set&af_id=SBUDID",
+    "pedicure": "https://shopee.co.id/search?keyword=pedicure+set&af_id=SBUDID",
+    "kuku palsu": "https://shopee.co.id/search?keyword=kuku+palsu&af_id=SBUDID",
+}
+
+# Free stock images per niche
+STOCK_IMAGES = {
+    "nails": [
+        "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=800",
+        "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=800",
+    ],
+    "gel": [
+        "https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=800",
+    ],
+    "art": [
+        "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=800",
+    ],
+}
 
 
 @dataclass
@@ -19,29 +47,50 @@ class Article:
 
 class ArticleWriter:
     def write(self, seo_plan: SEOPlan, word_count: tuple = (1500, 2500)) -> Article:
+        # Find matching affiliate link
+        affiliate_url = ""
+        for key, url in AFFILIATE_LINKS.items():
+            if key in seo_plan.primary_keyword.lower():
+                affiliate_url = url
+                break
+        if not affiliate_url:
+            affiliate_url = "https://shopee.co.id/search?keyword=nail+art&af_id=SBUDID"
+
+        # Find matching stock images
+        images = []
+        for key, imgs in STOCK_IMAGES.items():
+            if key in seo_plan.primary_keyword.lower():
+                images = imgs
+                break
+        if not images:
+            images = STOCK_IMAGES.get("nails", [])
+
         prompt = f"""Tulis artikel panjang (1500-2000 kata) tentang "{seo_plan.primary_keyword}" dalam Bahasa Indonesia.
 
-Gaya: natural, ramah, seperti teman yang berbagi tips tentang kuku. Bukan gaya dokter atau akademik.
+Gaya: natural, ramah, seperti teman yang berbagi tips tentang kuku. Bukan gaya dokter.
 
-Struktur wajib:
-1. H2 heading untuk setiap bagian utama (minimal 5 bagian)
-2. Sertakan tips praktis yang bisa langsung dipraktikkan
-3. FAQ section di akhir dengan tepat 5 pertanyaan (H3 headings)
-4. Kesimpulan di akhir sebelum FAQ
+ATURAN PENTING:
+1. Setiap <h2> bagian utama HARUS diikuti <img> gambar di baris berikutnya:
+   <img src="GAMBAR_URL" alt="DESKRIPSI GAMBAR" width="100%">
+   Gunakan URL gambar ini (rotate): {images[0] if images else 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=800'}
 
-HTML format:
-- Pakai <h2> untuk judul bagian
-- <p> untuk paragraf
-- <ul><li> untuk list tips
-- <strong> hanya untuk penekanan个别 kata, jang wrap seluruh paragraf
-- <em> untuk catatan/disclaimer
-- JANGAN pakai <h1>
+2. Di akhir artikel SEBELUM FAQ, tambahkan section affiliate CTA:
+   <h2>Rekomendasi Produk</h2>
+   <p>Mau beli produk terkait? Lihat rekomendasi terbaik di Shopee:</p>
+   <p style="text-align:center;"><a href="{affiliate_url}" target="_blank" style="background:#FF4500;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-size:16px;">🛒 Beli di Shopee Sekarang</a></p>
 
-Disclaimer di akhir (sebelum FAQ):
-<p><em>Catatan: Konten ini bersifat edukasi umum, bukan pengganti konsultasi profesional.</em></p>
+3. Struktur wajib:
+   - <h2> untuk judul bagian (minimal 5)
+   - <img> SETIAP H2 (pake URL dari atas)
+   - <p> untuk paragraf
+   - <ul><li> untuk list tips
+   - <strong> untuk penekanan个别 kata saja
+   - FAQ 5 pertanyaan (<h3>)
+   - Disclaimer di akhir
 
-JANGAN sertakan "ditulis oleh" atau atribusi penulis.
-JANGAN pakai code block atau markdown — HTML murni."""
+4. Disclaimer: <p><em>Catatan: Konten ini bersifat edukasi umum, bukan pengganti konsultasi profesional. Link afiliasi di atas membantu kami tetap menghasilkan konten gratis untuk Anda.</em></p>
+
+JANGAN: "ditulis oleh", code block, markdown."""
 
         try:
             resp = requests.post(ROUTER_URL, json={
@@ -60,7 +109,14 @@ JANGAN pakai code block atau markdown — HTML murni."""
             content = re.sub(r'```html\s*', '', content)
             content = re.sub(r'```\s*', '', content)
             
-            # Extract title from first non-faq H2
+            # If no images in output, inject after first <h2>
+            if '<img' not in content:
+                first_h2 = re.search(r'(</h2>)', content)
+                if first_h2:
+                    img_tag = f'\n<img src="{images[0]}" alt="{seo_plan.primary_keyword}" width="100%">'
+                    content = content[:first_h2.end()] + img_tag + content[first_h2.end():]
+            
+            # Extract title
             skip = ['pertanyaan yang sering', 'kesimpulan', 'faq']
             h2s = re.findall(r'<h2[^>]*>([^<]+)</h2>', content)
             title = seo_plan.primary_keyword.title()
@@ -69,14 +125,12 @@ JANGAN pakai code block atau markdown — HTML murni."""
                     title = h.strip()
                     break
             
-            # Build meta description
             first_p = re.search(r'<p[^>]*>([^<]+)</p>', content)
-            meta = first_p.group(1)[:155] if first_p else f"Panduan lengkap {seo_plan.primary_keyword} untuk pemula."
+            meta = first_p.group(1)[:155] if first_p else f"Panduan {seo_plan.primary_keyword}."
             
-            # Validate word count
-            clean_text = re.sub(r'<[^>]+>', '', content)
-            wc = len(clean_text.split())
-            print(f"  Words: {wc}, H2: {len(re.findall(r'<h2', content))}")
+            wc = len(re.sub(r'<[^>]+>', '', content).split())
+            img_count = len(re.findall(r'<img', content))
+            print(f"  Words: {wc}, H2: {len(re.findall(r'<h2', content))}, Images: {img_count}, Affiliate: {'affiliate' in content.lower() or 'shopee' in content.lower()}")
             
             return Article(
                 title=title[:120],
@@ -85,4 +139,4 @@ JANGAN pakai code block atau markdown — HTML murni."""
             )
         except Exception as e:
             print(f"  Article gen error: {e}")
-            return Article(title="Error", content_html="<p>Generation failed</p>", meta_description="")
+            return Article(title="Error", content_html="", meta_description="")
