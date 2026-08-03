@@ -1,0 +1,74 @@
+# Affiliate Links — from NailMoodID_Master_60Pins.xlsx
+# Sumber: Shopee_Affiliate_Products_Source.csv
+
+links:
+  gel polish set:
+    url: "https://s.shopee.co.id/7AcNpx69T8"
+    product: "MEFA Gel Nail Polish Set 12 Warna"
+    price: "Rp128.900"
+    commission: "13.5%"
+  beginner gel nails:
+    url: "https://s.shopee.co.id/7AcNpx69T8"
+    product: "MEFA Gel Nail Polish Set 12 Warna"
+    price: "Rp128.900"
+    commission: "13.5%"
+  nude nails:
+    url: "https://s.shopee.co.id/70Ixde6mo7"
+    product: "Modelones Gel Nail Polish Set 6 Warna Nude"
+    price: "Rp99.900"
+    commission: "16.5%"
+  clean girl nails:
+    url: "https://s.shopee.co.id/70Ixde6mo7"
+    product: "Modelones Gel Nail Polish Set 6 Warna Nude"
+    price: "Rp99.900"
+    commission: "16.5%"
+  uv nail lamp:
+    url: "https://s.shopee.co.id/7VFEEZ4snE"
+    product: "Nail.World Nail Dryer UV LED 280W"
+    price: "Rp122.600"
+    commission: "7.5%"
+  wedding nails:
+    url: "https://s.shopee.co.id/5LAjeaD8Bt"
+    product: "Press On Nails Wedding Nude Ivory"
+    price: "Rp97.000"
+    commission: "11.5%"
+  press on nails:
+    url: "https://s.shopee.co.id/6L3GqQ9KAB"
+    product: "Press On Nails Handmade Ivory Champagne Flower Pearl"
+    price: "Rp88.000"
+    commission: "11.5%"
+  glass cat eye:
+    url: "https://s.shopee.co.id/6Ajqe79xV6"
+    product: "JovyArt Glass Cat Eye Press On Nails"
+    price: "Rp61.200"
+    commission: "12.5%"
+  red nails:
+    url: "https://s.shopee.co.id/4AymGRHZYm"
+    product: "Press On Nails Merah Unik Gratis Lem"
+    price: "Rp27.500"
+    commission: "17%"
+  marble wedding:
+    url: "https://s.shopee.co.id/6VMh2j8gpC"
+    product: "Press On Nails Handmade Wedding Series Marble"
+    price: "Rp15.800"
+    commission: "17.5%"
+  handmade press on:
+    url: "https://s.shopee.co.id/5q70FVBEB0"
+    product: "Quillsnitch Premium Handmade Press On Nails"
+    price: "Rp48.900"
+    commission: "5%"
+  korean flower:
+    url: "https://s.shopee.co.id/5fna3CBrVz"
+    product: "Kuku Palsu Korean Cat Eye Bunga Premium"
+    price: "Rp31.900"
+    commission: "13.5%"
+  portable nail lamp:
+    url: "https://s.shopee.co.id/7fYeQs4FSJ"
+    product: "BORN PRETTY Handheld UV Light Portable"
+    price: "Rp119.000"
+    commission: "5.5%"
+  gel nail removal:
+    url: "https://s.shopee.co.id/40fM48ICtl"
+    product: "Set 7in1 Alat Pembersih Kutek Gel"
+    price: "Rp49.900"
+    commission: "11.5%"

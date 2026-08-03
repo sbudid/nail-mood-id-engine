@@ -6,18 +6,22 @@ import requests
 import os
 from src.modules.keyword_research import SEOPlan, ROUTER_URL, ROUTER_KEY
 
-# Shopee affiliate links — nail niche
+# Shopee affiliate links — REAL from NailMoodID_Master_60Pins.xlsx
 AFFILIATE_LINKS = {
-    "press on nails": "https://shopee.co.id/search?keyword=press+on+nails&af_id=SBUDID",
-    "gel nails": "https://shopee.co.id/search?keyword=gel+nails+kit&af_id=SBUDID",
-    "cat kuku": "https://shopee.co.id/search?keyword=cat+kuku+gel&af_id=SBUDID",
-    "kutek gel": "https://shopee.co.id/search?keyword=kutek+gel&af_id=SBUDID",
-    "nail art": "https://shopee.co.id/search?keyword=alat+nail+art&af_id=SBUDID",
-    "nail sticker": "https://shopee.co.id/search?keyword=nail+sticker&af_id=SBUDID",
-    "nail lamp": "https://shopee.co.id/search?keyword=nail+uv+lamp&af_id=SBUDID",
-    "manicure": "https://shopee.co.id/search?keyword=manicure+set&af_id=SBUDID",
-    "pedicure": "https://shopee.co.id/search?keyword=pedicure+set&af_id=SBUDID",
-    "kuku palsu": "https://shopee.co.id/search?keyword=kuku+palsu&af_id=SBUDID",
+    "gel polish set": "https://s.shopee.co.id/7AcNpx69T8",
+    "beginner gel nails": "https://s.shopee.co.id/7AcNpx69T8",
+    "nude nails": "https://s.shopee.co.id/70Ixde6mo7",
+    "clean girl nails": "https://s.shopee.co.id/70Ixde6mo7",
+    "uv nail lamp": "https://s.shopee.co.id/7VFEEZ4snE",
+    "wedding nails": "https://s.shopee.co.id/5LAjeaD8Bt",
+    "press on nails": "https://s.shopee.co.id/6L3GqQ9KAB",
+    "glass cat eye": "https://s.shopee.co.id/6Ajqe79xV6",
+    "red nails": "https://s.shopee.co.id/4AymGRHZYm",
+    "marble wedding": "https://s.shopee.co.id/6VMh2j8gpC",
+    "handmade press on": "https://s.shopee.co.id/5q70FVBEB0",
+    "korean flower": "https://s.shopee.co.id/5fna3CBrVz",
+    "portable nail lamp": "https://s.shopee.co.id/7fYeQs4FSJ",
+    "gel nail removal": "https://s.shopee.co.id/40fM48ICtl",
 }
 
 # Free stock images per niche
@@ -54,7 +58,7 @@ class ArticleWriter:
                 affiliate_url = url
                 break
         if not affiliate_url:
-            affiliate_url = "https://shopee.co.id/search?keyword=nail+art&af_id=SBUDID"
+            affiliate_url = AFFILIATE_LINKS.get("gel polish set", "https://s.shopee.co.id/7AcNpx69T8")
 
         # Find matching stock images
         images = []
@@ -63,7 +67,7 @@ class ArticleWriter:
                 images = imgs
                 break
         if not images:
-            images = STOCK_IMAGES.get("nails", [])
+            images = STOCK_IMAGES.get("nails", ["https://images.unsplash.com/photo-1604654894610-df63bc536371?w=800"])
 
         prompt = f"""Tulis artikel panjang (1500-2000 kata) tentang "{seo_plan.primary_keyword}" dalam Bahasa Indonesia.
 
