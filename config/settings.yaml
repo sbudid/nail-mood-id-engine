@@ -1,5 +1,6 @@
 # Global Configuration — Nail Mood ID Engine
 project_name: nail-mood-id
+blog_id: "4276182482507605794"
 blog_url: https://nailmoodid.blogspot.com
 language: id
 max_articles_per_run: 3
