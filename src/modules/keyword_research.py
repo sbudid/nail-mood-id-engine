@@ -38,7 +38,7 @@ Mix of:
                 "max_tokens": 2048,
                 "temperature": 0.7,
                 "stream": False
-            }, headers={"Authorization": f"Bearer {ROUTER_KEY}", "Content-Type": "application/json"}, timeout=60)
+            }, headers={"Authorization": f"Bearer {ROUTER_KEY}", "Content-Type": "application/json"}, timeout=120)
             
             data = resp.json()
             msg = data["choices"][0]["message"]
