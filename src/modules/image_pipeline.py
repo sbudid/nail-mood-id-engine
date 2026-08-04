@@ -29,6 +29,23 @@ def _match_pin(topic: str) -> dict:
     return best_pin or {}
 
 
+def load_pin_data(xlsx_path: str, topic: str) -> dict:
+    """Match topic to pin data from master xlsx for image prompts."""
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(xlsx_path)
+        ws = wb["Pin_Content_60"]
+        topic_lower = topic.lower()
+        for row in ws.iter_rows(values_only=True):
+            if not row[0] or not str(row[0]).startswith("P"): continue
+            keyword = str(row[4] or "").lower()
+            title = str(row[8] or "").lower()
+            if any(k in topic_lower for k in keyword.split(", ")) or any(k in topic_lower for k in title.split()):
+                return {"id": row[0], "keyword": row[4], "product": row[6], "title": row[8], "image_prompt": row[17] or "", "affiliate": row[15] or ""}
+    except Exception: pass
+    return {}
+
+
 def _pollinations_url(prompt: str, width=1000, height=1500) -> str:
     """Generate Pollinations URL as fallback."""
     clean = re.sub(r"<[^>]+>", "", prompt).strip()
