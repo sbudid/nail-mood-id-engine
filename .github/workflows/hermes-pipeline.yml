@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       topic:
-        description: 'Main Topic (e.g., Gel Nails)'
+        description: 'Main Topic (e.g., Gel Nails, Press On Nails, Cat Eye Nails)'
         required: true
         default: 'Gel Nails'
       max_articles:
@@ -24,20 +24,22 @@ jobs:
           python-version: '3.11'
 
       - name: Install Dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt pyyaml requests
 
-      - name: Run Hermes Engine
+      - name: Run Nail Mood Engine
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
-          SHOPEE_AFFILIATE_ID: ${{ secrets.SHOPEE_AFFILIATE_ID }}
+          ROUTER_API_KEY: ${{ secrets.ROUTER_API_KEY }}
+          BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
+          BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
+          BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
         run: |
           python -m src.core.orchestrator \
             --topic "${{ github.event.inputs.topic }}" \
             --max ${{ github.event.inputs.max_articles }}
 
-      - name: Upload Publishing Package
+      - name: Upload Output
         uses: actions/upload-artifact@v4
         with:
-          name: nail-mood-publishing-package
+          name: nail-mood-output
           path: data/Published/
