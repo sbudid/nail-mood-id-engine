@@ -26,16 +26,9 @@ AFFILIATE_LINKS = {
 
 # Free stock images per niche
 STOCK_IMAGES = {
-    "nails": [
-        "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=800",
-        "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=800",
-    ],
-    "gel": [
-        "https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=800",
-    ],
-    "art": [
-        "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=800",
-    ],
+    "nails": [],
+    "gel": [],
+    "art": [],
 }
 
 
