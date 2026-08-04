@@ -45,13 +45,15 @@ class NailMoodEngine:
             xlsx_path = os.path.join(config.get("project_root", "."), "data", "NailMoodID_Master_60Pins.xlsx")
             pin_data = load_pin_data(xlsx_path, topic)
             pin_images = resolve_images(None, topic, pin_data=pin_data)
-            images = [img["local"] for img in pin_images if img.get("local")]
 
-            # Replace all stock/unsplash URLs with Pollinations
+            # Replace stock/unsplash URLs with Pollinations
             import re as _re
             stock_pattern = _re.compile(r'src="https://images\.unsplash\.com/[^"]*"')
-            for img_url in images[:6]:
-                article.content_html = stock_pattern.sub(f'src="{img_url}"', article.content_html, count=1)
+            for img in pin_images[:6]:
+                if img.get("local"):
+                    article.content_html = stock_pattern.sub(f'src="{img["local"]}"', article.content_html, count=1)
+
+            images = [{"url": img["local"], "path": img["local"], "alt": img.get("alt", "")} for img in pin_images if img.get("local")]
 
             # STEP 5-6: Pinterest + Shopee
             pins = PinterestAssetCreator().create_pins(article, images)
