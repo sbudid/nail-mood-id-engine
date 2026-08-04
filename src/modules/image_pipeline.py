@@ -15,7 +15,7 @@ def generate_image(prompt: str, save_path: str, width: int = 1000, height: int =
         clean_prompt = "beautiful nail art, close up, elegant, glossy finish, clean background"
 
     encoded = urllib.parse.quote(clean_prompt)
-    url = f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&nologo=true&seed=42"
+    url = f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&nologo=true"
 
     try:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
@@ -43,19 +43,27 @@ def resolve_images(article, topic: str, pin_data: dict = None) -> list:
     if not prompt:
         prompt = f"Vertical Pinterest beauty editorial, 2:3. Close-up of {topic} nails, realistic, glossy finish, clean background, elegant, beauty editorial style"
 
-    # Generate 1 main image
+    import random
     slug = re.sub(r"[^a-z0-9]+", "-", topic.lower())[:40]
-    main_path = os.path.join(save_dir, f"{slug}_main.jpg")
-    result = generate_image(prompt, main_path)
-    if result:
-        images.append({"local": result, "alt": topic})
+    variations = [
+        (prompt, "close-up, beauty editorial"),
+        (prompt.replace("close-up", "flat lay") + ", overhead shot, lifestyle", "flat lay"),
+        (prompt.replace("editorial", "natural lighting") + ", different angle, soft focus", "angle"),
+        (prompt + ", detail shot, macro lens", "detail"),
+        (prompt.replace("2:3", "1:1").replace("vertical", "square") + ", studio lighting, clean background", "studio"),
+        (prompt + ", on marble surface, aesthetic, minimal", "lifestyle"),
+        (prompt.replace("close-up", "hands together") + ", symmetrical, both hands, elegant pose", "both hands"),
+    ]
 
-    # Generate 1 supporting image with varied prompt
-    support_prompt = prompt.replace("close-up", "flat lay").replace("editorial", "lifestyle") + ", different angle, natural lighting"
-    support_path = os.path.join(save_dir, f"{slug}_support.jpg")
-    result2 = generate_image(support_prompt, support_path)
-    if result2:
-        images.append({"local": result2, "alt": f"{topic} overview"})
+    for i, (variation_prompt, suffix) in enumerate(variations[:6]):
+        seed = random.randint(1000, 99999)
+        variation_prompt += f", seed {seed}"
+        img_path = os.path.join(save_dir, f"{slug}_{i+1}_{suffix.replace(' ', '_')}.jpg")
+        result = generate_image(variation_prompt, img_path)
+        if result:
+            images.append({"local": result, "alt": f"{topic} — {suffix}"})
+        if len(images) >= 5:
+            break
 
     return images
 
