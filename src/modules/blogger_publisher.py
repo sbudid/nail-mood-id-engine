@@ -5,8 +5,29 @@ import json
 import requests
 import datetime
 
-sys.path.insert(0, "/home/ubuntu/autoblog-bumil")
-from auto_blog import get_blogger_token
+
+def _get_blogger_token():
+    """Get Blogger access token from env vars or fallback to local file."""
+    refresh_token = os.getenv("BLOGGER_REFRESH_TOKEN")
+    client_id = os.getenv("BLOGGER_CLIENT_ID", "651496957848-t0ik8spuggutsp4k2thjk9o8a1sk900b.apps.googleusercontent.com")
+    client_secret = os.getenv("BLOGGER_CLIENT_SECRET", "")
+    
+    if refresh_token and client_secret:
+        resp = requests.post("https://oauth2.googleapis.com/token", data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token",
+        })
+        return resp.json().get("access_token", "")
+    
+    # Fallback: import from autoblog-bumil
+    try:
+        sys.path.insert(0, "/home/ubuntu/autoblog-bumil")
+        from auto_blog import get_blogger_token
+        return get_blogger_token()
+    except Exception:
+        return ""
 
 
 class BloggerPublisher:
@@ -15,7 +36,7 @@ class BloggerPublisher:
 
     def publish(self, article, labels: list = None) -> dict:
         """Publish article to Blogger. Returns post info."""
-        token = get_blogger_token()
+        token = _get_blogger_token()
         
         post = {
             "kind": "blogger#post",
