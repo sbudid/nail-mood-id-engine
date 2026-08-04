@@ -8,28 +8,16 @@ import logging
 logger = logging.getLogger("engine.image")
 
 
-def generate_image(prompt: str, save_path: str, width: int = 1000, height: int = 1500) -> str:
-    """Generate image via Pollinations.ai. Returns local path."""
+def generate_image(prompt: str, save_path: str = "", width: int = 1000, height: int = 1500) -> str:
+    """Generate image via Pollinations.ai. Returns public URL."""
     clean_prompt = re.sub(r"<[^>]+>", "", prompt).strip()
     if len(clean_prompt) < 10:
         clean_prompt = "beautiful nail art, close up, elegant, glossy finish, clean background"
 
     encoded = urllib.parse.quote(clean_prompt)
     url = f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&nologo=true"
-
-    try:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        urllib.request.urlretrieve(url, save_path)
-        size = os.path.getsize(save_path)
-        if size > 5000:
-            logger.info(f"Image generated: {size/1024:.0f}KB")
-            return save_path
-        else:
-            logger.warning(f"Image too small: {size}B")
-            return ""
-    except Exception as e:
-        logger.error(f"Image gen failed: {e}")
-        return ""
+    logger.info(f"Image URL: {url[:80]}...")
+    return url
 
 
 def resolve_images(article, topic: str, pin_data: dict = None) -> list:
@@ -58,8 +46,7 @@ def resolve_images(article, topic: str, pin_data: dict = None) -> list:
     for i, (variation_prompt, suffix) in enumerate(variations[:6]):
         seed = random.randint(1000, 99999)
         variation_prompt += f", seed {seed}"
-        img_path = os.path.join(save_dir, f"{slug}_{i+1}_{suffix.replace(' ', '_')}.jpg")
-        result = generate_image(variation_prompt, img_path)
+        result = generate_image(variation_prompt)
         if result:
             images.append({"local": result, "alt": f"{topic} — {suffix}"})
         if len(images) >= 5:
