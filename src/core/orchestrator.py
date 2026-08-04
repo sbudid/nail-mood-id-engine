@@ -13,6 +13,7 @@ from src.modules.pinterest_generator import PinterestAssetCreator
 from src.modules.blogger_publisher import BloggerPublisher
 from src.utils.logger import get_logger
 from src.utils.file_handler import load_yaml
+from src.modules.image_pipeline import resolve_images, load_pin_data
 
 log = get_logger("engine")
 
