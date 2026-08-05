@@ -121,8 +121,15 @@ def resolve_images(article, topic: str, pin_data: dict = None) -> list:
     ]
     
     for i, v in enumerate(variations[:3]):
+        # Try 9Router ModeImage first
         local = _modeimage_url(v, seed=random.randint(1, 99999))
         if local:
             images.append({"local": local, "alt": f"{topic} — variation {i+1}"})
+            continue
+        # Fallback: Pollinations URL
+        clean = re.sub(r"<[^>]+>", "", v).strip()
+        encoded = urllib.parse.quote(clean)
+        url = f"https://image.pollinations.ai/prompt/{encoded}?width=1000&height=1500&nologo=true"
+        images.append({"local": url, "alt": f"{topic} — variation {i+1}"})
     
     return images
