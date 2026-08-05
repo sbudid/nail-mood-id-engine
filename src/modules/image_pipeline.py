@@ -1,10 +1,14 @@
-"""Image pipeline — pin images from package first, Pollinations fallback."""
+"""Image pipeline — pin images from package first, 9Router ModeImage fallback."""
 import os
 import re
 import json
 import random
 import urllib.parse
 import logging
+import base64
+import requests
+from io import BytesIO
+from PIL import Image
 
 logger = logging.getLogger("engine.image")
 
@@ -46,15 +50,58 @@ def load_pin_data(xlsx_path: str, topic: str) -> dict:
     return {}
 
 
-def _pollinations_url(prompt: str, width=1000, height=1500) -> str:
-    """Generate Pollinations URL as fallback."""
+def _modeimage_url(prompt: str, seed: int = None) -> str:
+    """Generate image via 9Router ModeImage API. Returns local file path."""
+    api_key = os.environ.get("ROUTER_API_KEY", "")
+    if not api_key:
+        logger.warning("ROUTER_API_KEY not set, skipping ModeImage")
+        return ""
+    
+    base_url = os.environ.get("ROUTER_BASE_URL", "http://43.134.186.23:20128")
     clean = re.sub(r"<[^>]+>", "", prompt).strip()
-    encoded = urllib.parse.quote(clean)
-    return f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&nologo=true"
+    if seed is None:
+        seed = random.randint(1, 99999)
+    
+    try:
+        resp = requests.post(
+            f"{base_url}/v1/images/generations",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": "ModeImage", "prompt": clean, "n": 1, "size": "1024x1024", "seed": seed},
+            timeout=120
+        )
+        if resp.status_code != 200:
+            logger.warning(f"ModeImage error {resp.status_code}: {resp.text[:200]}")
+            return ""
+        
+        data = resp.json()
+        img_data = data["data"][0]
+        
+        # Handle b64_json or URL response
+        if "b64_json" in img_data:
+            img_bytes = base64.b64decode(img_data["b64_json"])
+        elif "url" in img_data:
+            img_resp = requests.get(img_data["url"], timeout=30)
+            img_bytes = img_resp.content
+        else:
+            return ""
+        
+        # Save to local file
+        cache_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "images")
+        os.makedirs(cache_dir, exist_ok=True)
+        fpath = os.path.join(cache_dir, f"modeimage_{seed}.jpg")
+        img = Image.open(BytesIO(img_bytes))
+        if img.mode == "RGBA":
+            img = img.convert("RGB")
+        img.save(fpath, "JPEG", quality=90)
+        logger.info(f"ModeImage saved: {fpath}")
+        return fpath
+    except Exception as e:
+        logger.warning(f"ModeImage failed: {e}")
+        return ""
 
 
 def resolve_images(article, topic: str, pin_data: dict = None) -> list:
-    """Resolve images: pin package first, then Pollinations fallback."""
+    """Resolve images: pin package first, then 9Router ModeImage fallback."""
     images = []
     
     # Priority 1: Pin package images (match by keyword)
@@ -63,7 +110,7 @@ def resolve_images(article, topic: str, pin_data: dict = None) -> list:
         images.append({"local": pin["url"], "alt": topic})
         logger.info(f"Pin image matched: {pin['url'][:50]}")
     
-    # Priority 2: Pollinations variations for variety
+    # Priority 2: 9Router ModeImage variations
     xlsx_prompt = pin_data.get("image_prompt", "") if pin_data else ""
     base_prompt = xlsx_prompt if xlsx_prompt else f"Close-up of {topic} nails, beauty editorial, glossy finish"
     
@@ -71,10 +118,11 @@ def resolve_images(article, topic: str, pin_data: dict = None) -> list:
         f"{base_prompt}, flat lay, overhead shot, lifestyle",
         f"{base_prompt.replace('close-up', 'macro')}, detail shot, sharp focus",
         f"{base_prompt}, natural lighting, soft focus, elegant",
-        f"{base_prompt}, both hands, symmetrical, studio lighting",
     ]
     
     for i, v in enumerate(variations[:3]):
-        images.append({"local": _pollinations_url(v), "alt": f"{topic} — variation {i+1}"})
+        local = _modeimage_url(v, seed=random.randint(1, 99999))
+        if local:
+            images.append({"local": local, "alt": f"{topic} — variation {i+1}"})
     
     return images
