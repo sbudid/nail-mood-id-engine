@@ -51,52 +51,67 @@ def load_pin_data(xlsx_path: str, topic: str) -> dict:
 
 
 def _modeimage_url(prompt: str, seed: int = None) -> str:
-    """Generate image via 9Router ModeImage API. Returns local file path."""
-    api_key = os.environ.get("ROUTER_API_KEY", "")
+    """Generate image via Qwen Dashscope API. Returns local file path."""
+    api_key = os.environ.get("DASHSCOPE_API_KEY", "")
     if not api_key:
-        logger.warning("ROUTER_API_KEY not set, skipping ModeImage")
+        logger.warning("DASHSCOPE_API_KEY not set, skipping image generation")
         return ""
-    
-    base_url = os.environ.get("ROUTER_BASE_URL", "http://43.134.186.23:20128")
+
     clean = re.sub(r"<[^>]+>", "", prompt).strip()
     if seed is None:
         seed = random.randint(1, 99999)
-    
+
     try:
+        # Submit async task
         resp = requests.post(
-            f"{base_url}/v1/images/generations",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": "cf/@cf/black-forest-labs/flux-2-klein-9b", "prompt": clean, "n": 1, "size": "1024x1024", "seed": seed},
-            timeout=120
+            "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "X-DashScope-Async": "enable"},
+            json={"model": "wanx2.1-t2i-turbo", "input": {"prompt": clean}, "parameters": {"size": "1024*1024", "n": 1}},
+            timeout=30
         )
         if resp.status_code != 200:
-            logger.warning(f"ModeImage error {resp.status_code}: {resp.text[:200]}")
+            logger.warning(f"Dashscope submit error {resp.status_code}: {resp.text[:200]}")
             return ""
         
-        data = resp.json()
-        img_data = data["data"][0]
-        
-        # Handle b64_json or URL response
-        if "b64_json" in img_data:
-            img_bytes = base64.b64decode(img_data["b64_json"])
-        elif "url" in img_data:
-            img_resp = requests.get(img_data["url"], timeout=30)
-            img_bytes = img_resp.content
-        else:
+        task_id = resp.json().get("output", {}).get("task_id", "")
+        if not task_id:
+            logger.warning(f"No task_id: {resp.text[:200]}")
             return ""
         
-        # Save to local file
-        cache_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "images")
-        os.makedirs(cache_dir, exist_ok=True)
-        fpath = os.path.join(cache_dir, f"modeimage_{seed}.jpg")
-        img = Image.open(BytesIO(img_bytes))
-        if img.mode == "RGBA":
-            img = img.convert("RGB")
-        img.save(fpath, "JPEG", quality=90)
-        logger.info(f"ModeImage saved: {fpath}")
-        return fpath
+        # Poll for result (max 90s)
+        for _ in range(30):
+            time.sleep(3)
+            poll = requests.get(
+                f"https://dashscope.aliyuncs.com/api/v1/tasks/{task_id}",
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=15
+            )
+            status = poll.json().get("output", {}).get("task_status", "")
+            if status == "SUCCEEDED":
+                results = poll.json()["output"].get("results", [{}])
+                img_url = results[0].get("url", "") if results else ""
+                if not img_url:
+                    logger.warning("Dashscope: no image URL in result")
+                    return ""
+                img_resp = requests.get(img_url, timeout=30)
+                img_bytes = img_resp.content
+                cache_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "images")
+                os.makedirs(cache_dir, exist_ok=True)
+                fpath = os.path.join(cache_dir, f"dashscope_{seed}.jpg")
+                img = Image.open(BytesIO(img_bytes))
+                if img.mode == "RGBA":
+                    img = img.convert("RGB")
+                img.save(fpath, "JPEG", quality=90)
+                logger.info(f"Dashscope image saved: {fpath}")
+                return fpath
+            elif status == "FAILED":
+                logger.warning(f"Dashscope task failed: {poll.text[:200]}")
+                return ""
+        
+        logger.warning("Dashscope task timed out")
+        return ""
     except Exception as e:
-        logger.warning(f"ModeImage failed: {e}")
+        logger.warning(f"Dashscope failed: {e}")
         return ""
 
 
