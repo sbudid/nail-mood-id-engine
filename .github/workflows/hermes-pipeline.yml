@@ -1,6 +1,9 @@
 name: Hermes Nail Mood Pipeline
 
 on:
+  schedule:
+    # Setiap hari jam 09:00 WIB (02:00 UTC)
+    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       topic:
@@ -26,6 +29,34 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt pyyaml requests
 
+      # --- Topic rotation (hanya untuk scheduled run) ---
+      - name: Get topic from rotation
+        if: github.event_name == 'schedule'
+        id: topic
+        run: |
+          TOPICS_FILE="data/topics.txt"
+          INDEX_FILE="data/current_topic_index.txt"
+
+          # Baca index sekarang (default 0)
+          if [ -f "$INDEX_FILE" ]; then
+            INDEX=$(cat "$INDEX_FILE")
+          else
+            INDEX=0
+          fi
+
+          # Total topik
+          TOTAL=$(wc -l < "$TOPICS_FILE")
+
+          # Ambil topik sesuai index
+          TOPIC=$(sed -n "$((INDEX + 1))p" "$TOPICS_FILE")
+          echo "topic=$TOPIC" >> "$GITHUB_OUTPUT"
+          echo "📰 Topic #$((INDEX + 1))/$TOTAL: $TOPIC"
+
+          # Increment index (loop balik ke 0)
+          NEXT_INDEX=$(( (INDEX + 1) % TOTAL ))
+          echo "$NEXT_INDEX" > "$INDEX_FILE"
+
+      # --- Run engine ---
       - name: Run Nail Mood Engine
         env:
           ROUTER_API_KEY: ${{ secrets.ROUTER_API_KEY }}
@@ -34,9 +65,27 @@ jobs:
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
         run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            TOPIC="${{ steps.topic.outputs.topic }}"
+          else
+            TOPIC="${{ github.event.inputs.topic }}"
+          fi
+          MAX="${{ github.event.inputs.max_articles || '1' }}"
+
+          echo "🚀 Generating article for: $TOPIC"
           python -m src.core.orchestrator \
-            --topic "${{ github.event.inputs.topic }}" \
-            --max ${{ github.event.inputs.max_articles }}
+            --topic "$TOPIC" \
+            --max "$MAX"
+
+      # --- Commit index update (hanya untuk scheduled run) ---
+      - name: Commit topic index
+        if: github.event_name == 'schedule'
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add data/current_topic_index.txt
+          git diff --quiet && git diff --staged --quiet || \
+            (git commit -m "chore: rotate topic index [skip ci]" && git push)
 
       - name: Upload Output
         uses: actions/upload-artifact@v4
