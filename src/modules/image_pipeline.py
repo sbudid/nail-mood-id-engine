@@ -66,7 +66,7 @@ def _modeimage_url(prompt: str, seed: int = None) -> str:
         resp = requests.post(
             f"{base_url}/v1/images/generations",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": "ModeImage", "prompt": clean, "n": 1, "size": "1024x1024", "seed": seed},
+            json={"model": "cf/@cf/black-forest-labs/flux-2-klein-9b", "prompt": clean, "n": 1, "size": "1024x1024", "seed": seed},
             timeout=120
         )
         if resp.status_code != 200:
