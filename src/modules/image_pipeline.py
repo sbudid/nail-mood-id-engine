@@ -51,10 +51,11 @@ def load_pin_data(xlsx_path: str, topic: str) -> dict:
 
 
 def _modeimage_url(prompt: str, seed: int = None) -> str:
-    """Generate image via Qwen Dashscope API. Returns local file path."""
-    api_key = os.environ.get("DASHSCOPE_API_KEY", "")
+    """Generate image via 9Router FLUX. Returns local file path."""
+    api_key = os.environ.get("ROUTER_API_KEY", "")
     if not api_key:
-        logger.warning("DASHSCOPE_API_KEY not set, skipping image generation")
+        logger.warning("ROUTER_API_KEY not set, skipping image generation")
+    if not api_key:
         return ""
 
     clean = re.sub(r"<[^>]+>", "", prompt).strip()
@@ -63,11 +64,12 @@ def _modeimage_url(prompt: str, seed: int = None) -> str:
 
     try:
         # Submit async task
+        base_url = os.environ.get("ROUTER_BASE_URL", "http://43.134.186.23:20128")
         resp = requests.post(
-            "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "X-DashScope-Async": "enable"},
-            json={"model": "wanx2.1-t2i-turbo", "input": {"prompt": clean}, "parameters": {"size": "1024*1024", "n": 1}},
-            timeout=30
+            f"{base_url}/v1/images/generations",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": "cf/@cf/black-forest-labs/flux-2-klein-9b", "prompt": clean, "n": 1, "size": "1024x1024", "seed": seed},
+            timeout=120
         )
         if resp.status_code != 200:
             logger.warning(f"Dashscope submit error {resp.status_code}: {resp.text[:200]}")
