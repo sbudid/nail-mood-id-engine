@@ -51,11 +51,10 @@ def load_pin_data(xlsx_path: str, topic: str) -> dict:
 
 
 def _modeimage_url(prompt: str, seed: int = None) -> str:
-    """Generate image via 9Router FLUX. Returns local file path."""
-    api_key = os.environ.get("ROUTER_API_KEY", "")
+    """Generate image via Qwen Dashscope SDK. Returns local file path."""
+    api_key = os.environ.get("DASHSCOPE_API_KEY", "")
     if not api_key:
-        logger.warning("ROUTER_API_KEY not set, skipping image generation")
-    if not api_key:
+        logger.warning("DASHSCOPE_API_KEY not set, skipping image generation")
         return ""
 
     clean = re.sub(r"<[^>]+>", "", prompt).strip()
@@ -63,34 +62,43 @@ def _modeimage_url(prompt: str, seed: int = None) -> str:
         seed = random.randint(1, 99999)
 
     try:
-        # Submit async task
-        base_url = os.environ.get("ROUTER_BASE_URL", "http://43.134.186.23:20128")
-        resp = requests.post(
-            f"{base_url}/v1/images/generations",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": "cf/@cf/black-forest-labs/flux-2-klein-9b", "prompt": clean, "n": 1, "size": "1024x1024", "seed": seed},
-            timeout=120
+        import dashscope
+        dashscope.api_key = api_key
+        dashscope.base_http_api_url = "https://dashscope-intl.aliyuncs.com/api/v1"
+        from dashscope import ImageSynthesis
+        resp = ImageSynthesis.call(
+            model="wan2.1-t2i-turbo",
+            prompt=clean,
+            size="1024*1024",
+            n=1,
+            seed=seed
         )
         if resp.status_code != 200:
-            logger.warning(f"Dashscope submit error {resp.status_code}: {resp.text[:200]}")
+            logger.warning(f"Dashscope error {resp.status_code}: {resp.message}")
             return ""
         
-        task_id = resp.json().get("output", {}).get("task_id", "")
-        if not task_id:
-            logger.warning(f"No task_id: {resp.text[:200]}")
+        result = resp.output.results[0]
+        if hasattr(result, "url") and result.url:
+            img_resp = requests.get(result.url, timeout=30)
+            img_bytes = img_resp.content
+        elif hasattr(result, "b64_json") and result.b64_json:
+            img_bytes = base64.b64decode(result.b64_json)
+        else:
+            logger.warning("Dashscope: no image in response")
             return ""
         
-        # Poll for result (max 90s)
-        for _ in range(30):
-            time.sleep(3)
-            poll = requests.get(
-                f"https://dashscope.aliyuncs.com/api/v1/tasks/{task_id}",
-                headers={"Authorization": f"Bearer {api_key}"},
-                timeout=15
-            )
-            status = poll.json().get("output", {}).get("task_status", "")
-            if status == "SUCCEEDED":
-                results = poll.json()["output"].get("results", [{}])
+        cache_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "images")
+        os.makedirs(cache_dir, exist_ok=True)
+        fpath = os.path.join(cache_dir, f"dashscope_{seed}.jpg")
+        img = Image.open(BytesIO(img_bytes))
+        if img.mode == "RGBA":
+            img = img.convert("RGB")
+        img.save(fpath, "JPEG", quality=90)
+        logger.info(f"Dashscope image saved: {fpath}")
+        return fpath
+    except Exception as e:
+        logger.warning(f"Dashscope failed: {e}")
+        return ""
                 img_url = results[0].get("url", "") if results else ""
                 if not img_url:
                     logger.warning("Dashscope: no image URL in result")
