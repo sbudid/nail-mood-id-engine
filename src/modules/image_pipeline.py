@@ -89,7 +89,7 @@ def _modeimage_url(prompt: str, seed: int = None) -> str:
         dashscope.base_http_api_url = "https://dashscope-intl.aliyuncs.com/api/v1"
         from dashscope import ImageSynthesis
         resp = ImageSynthesis.call(
-            model="qwen-image-3.0",
+            model="qwen-image-plus",
             prompt=clean,
             size="1024*1024",
             n=1,
