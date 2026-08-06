@@ -20,6 +20,28 @@ if os.path.exists(_pin_file):
     PIN_IMAGES = json.load(open(_pin_file))
 
 
+def _upload_freeimage(local_path: str) -> str:
+    """Upload local image to freeimage.host. Returns public URL or empty string."""
+    try:
+        with open(local_path, "rb") as f:
+            resp = requests.post(
+                "https://freeimage.host/api/1/upload",
+                data={"key": "6d207e02198a847aa98d0a2a901485a5", "format": "json"},
+                files={"source": f},
+                timeout=30
+            )
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("status_code") == 200:
+                url = data["image"]["url"]
+                logger.info(f"Uploaded to freeimage: {url}")
+                return url
+        logger.warning(f"freeimage upload failed: {resp.status_code}")
+    except Exception as e:
+        logger.warning(f"freeimage upload error: {e}")
+    return ""
+
+
 def _match_pin(topic: str) -> dict:
     """Match topic to best pin image by keyword overlap."""
     topic_lower = topic.lower()
@@ -122,14 +144,17 @@ def resolve_images(article, topic: str, pin_data: dict = None) -> list:
     ]
     
     for i, v in enumerate(variations[:3]):
-        # Generate local Dashscope image (for Pinterest/download)
+        # Generate with Dashscope, upload to freeimage.host for public URL
         local = _modeimage_url(v, seed=random.randint(1, 99999))
-        
-        # Use Pollinations URL for article HTML (public, accessible)
+        if local:
+            public_url = _upload_freeimage(local)
+            if public_url:
+                images.append({"local": public_url, "alt": f"{topic} — variation {i+1}"})
+                continue
+        # Fallback: Pollinations (if upload fails)
         clean = re.sub(r"<[^>]+>", "", v).strip()
         encoded = urllib.parse.quote(clean)
-        poll_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1000&height=1500&nologo=true"
-        
-        images.append({"local": poll_url, "alt": f"{topic} — variation {i+1}", "dashscope": local or ""})
+        url = f"https://image.pollinations.ai/prompt/{encoded}?width=1000&height=1500&nologo=true"
+        images.append({"local": url, "alt": f"{topic} — variation {i+1}"})
     
     return images
