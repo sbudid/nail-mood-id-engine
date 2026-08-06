@@ -33,6 +33,71 @@ STOCK_IMAGES = {
 
 
 @dataclass
+def sanitize_article_html(html: str) -> str:
+    """Post-process AI-generated HTML for valid Blogger structure.
+    Model-agnostic — handles any AI output format.
+    """
+    # Strip markdown fences
+    html = re.sub(r'```html\s*', '', html)
+    html = re.sub(r'```\s*', '', html)
+    
+    # Remove empty tags
+    html = re.sub(r'<p>\s*</p>', '', html)
+    html = re.sub(r'<strong>\s*</strong>', '', html)
+    html = re.sub(r'<em>\s*</em>', '', html)
+    
+    # Fix orphan <strong> — wrap in <li> if looks like list item
+    html = re.sub(
+        r'(?<=\n)\s*<strong>([^<]{2,80})</strong>([^<]*)\s*(?=\n|$)',
+        r'<li><strong>\1</strong>\2</li>',
+        html
+    )
+    
+    # Wrap bare <li> in <ul>
+    li_pattern = re.compile(r'((?:<li>.*?</li>\s*)+)', re.DOTALL)
+    def wrap_li(m):
+        block = m.group(1).strip()
+        if block.startswith('<ul>'):
+            return block
+        return f'<ul>{block}</ul>'
+    html = li_pattern.sub(wrap_li, html)
+    
+    # Wrap bare text in <p>
+    block_tags = r'(</?h[23][^>]*>|<img[^>]*>|<ul[^>]*>|</ul>|<ol[^>]*>|</ol>|<li[^>]*>|</li>|<blockquote[^>]*>|</blockquote>)'
+    parts = re.split(block_tags, html)
+    result = []
+    in_list = False
+    for part in parts:
+        if re.match(r'<ul', part) or re.match(r'<ol', part):
+            in_list = True
+            result.append(part)
+        elif part in ('</ul>', '</ol>'):
+            in_list = False
+            result.append(part)
+        elif re.match(r'<(li|h[23]|img|/li|/h)', part):
+            result.append(part)
+        elif part.strip() and not in_list:
+            stripped = part.strip()
+            if stripped and not stripped.startswith('<p>') and not stripped.startswith('<a '):
+                result.append(f'<p>{stripped}</p>')
+            else:
+                result.append(part)
+        else:
+            result.append(part)
+    html = ''.join(result)
+    
+    # Fix nested <p> inside <li>
+    html = re.sub(r'<li>\s*<p>(.*?)</p>\s*</li>', r'<li>\1</li>', html, flags=re.DOTALL)
+    
+    # Fix double-wrapped <p><p>
+    html = re.sub(r'<p>\s*<p>(.*?)</p>\s*</p>', r'<p>\1</p>', html, flags=re.DOTALL)
+    
+    # Ensure <img> has width
+    html = re.sub(r'<img((?![^>]*width=)[^>]*)>', r'<img\1 width="100%">', html)
+    
+    return html
+
+
 class Article:
     title: str
     content_html: str
@@ -102,46 +167,9 @@ JANGAN: "ditulis oleh", code block, markdown."""
             msg = data["choices"][0]["message"]
             content = msg.get("content") or msg.get("reasoning") or ""
             
-            # Clean markdown fences
-            content = re.sub(r'```html\s*', '', content)
-            content = re.sub(r'```\s*', '', content)
+            # Clean + sanitize HTML (model-agnostic)
+            content = sanitize_article_html(content)
             
-            # --- HTML post-processing ---
-            # Fix orphan <strong> inside lists: wrap bare <strong>text</strong> lines in <li>
-            content = re.sub(r'(?<=\n)\s*<strong>([^<]+)</strong>([^<]*)</strong>\s*(?=\n|$)', r'<li><strong>\1</strong>\2</li>', content)
-            
-            # Fix broken list items: <li> with only <strong> — add missing text before
-            content = re.sub(r'<li>\s*<strong>([^<]+)</strong>\s*</li>', r'<li><strong>\1</strong></li>', content)
-            
-            # Wrap consecutive <li> in <ul> if not already
-            li_block = re.findall(r'(<li>.*?</li>(\s*\n)*)+', content)
-            for block in li_block:
-                if not block.strip().startswith('<ul>'):
-                    ul = '<ul>' + block.strip() + '</ul>'
-                    content = content.replace(block.strip(), ul, 1)
-            
-            # Ensure paragraphs: text between tags not in <p> gets wrapped
-            parts = re.split(r'(</?h[23][^>]*>|<img[^>]*>|<ul[^>]*>|</ul>|<li[^>]*>|</li>)', content)
-            result = []
-            in_list = False
-            for part in parts:
-                if re.match(r'<ul', part):
-                    in_list = True
-                    result.append(part)
-                elif part == '</ul>':
-                    in_list = False
-                    result.append(part)
-                elif re.match(r'<li', part) or part == '</li>' or re.match(r'</?h[23]', part) or re.match(r'<img', part):
-                    result.append(part)
-                elif part.strip() and not in_list:
-                    stripped = part.strip()
-                    if stripped and not stripped.startswith('<p>') and not stripped.startswith('<strong>'):
-                        result.append(f'<p>{stripped}</p>')
-                    else:
-                        result.append(part)
-                else:
-                    result.append(part)
-            content = ''.join(result)
             
             # If no images in output, inject after first <h2>
             if '<img' not in content:
