@@ -99,30 +99,6 @@ def _modeimage_url(prompt: str, seed: int = None) -> str:
     except Exception as e:
         logger.warning(f"Dashscope failed: {e}")
         return ""
-                img_url = results[0].get("url", "") if results else ""
-                if not img_url:
-                    logger.warning("Dashscope: no image URL in result")
-                    return ""
-                img_resp = requests.get(img_url, timeout=30)
-                img_bytes = img_resp.content
-                cache_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "images")
-                os.makedirs(cache_dir, exist_ok=True)
-                fpath = os.path.join(cache_dir, f"dashscope_{seed}.jpg")
-                img = Image.open(BytesIO(img_bytes))
-                if img.mode == "RGBA":
-                    img = img.convert("RGB")
-                img.save(fpath, "JPEG", quality=90)
-                logger.info(f"Dashscope image saved: {fpath}")
-                return fpath
-            elif status == "FAILED":
-                logger.warning(f"Dashscope task failed: {poll.text[:200]}")
-                return ""
-        
-        logger.warning("Dashscope task timed out")
-        return ""
-    except Exception as e:
-        logger.warning(f"Dashscope failed: {e}")
-        return ""
 
 
 def resolve_images(article, topic: str, pin_data: dict = None) -> list:
