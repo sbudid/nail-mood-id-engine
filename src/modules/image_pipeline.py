@@ -143,7 +143,7 @@ def resolve_images(article, topic: str, pin_data: dict = None) -> list:
         f"{base_prompt}, natural lighting, soft focus, elegant",
     ]
     
-    for i, v in enumerate(variations[:3]):
+    for i, v in enumerate(variations[:1]):
         # Generate with Dashscope, upload to freeimage.host for public URL
         local = _modeimage_url(v, seed=random.randint(1, 99999))
         if local:
