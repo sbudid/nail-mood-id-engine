@@ -4,6 +4,9 @@ import sys
 import json
 import requests
 import datetime
+import logging
+
+logger = logging.getLogger("engine.publish")
 
 
 def _get_blogger_token():
@@ -58,4 +61,5 @@ class BloggerPublisher:
             data = resp.json()
             return {"success": True, "id": data["id"], "url": data["url"]}
         else:
+            logger.error(f"Blogger publish failed {resp.status_code}: {resp.text[:300]}")
             return {"success": False, "error": resp.text[:200]}
