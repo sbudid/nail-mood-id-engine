@@ -106,6 +106,43 @@ JANGAN: "ditulis oleh", code block, markdown."""
             content = re.sub(r'```html\s*', '', content)
             content = re.sub(r'```\s*', '', content)
             
+            # --- HTML post-processing ---
+            # Fix orphan <strong> inside lists: wrap bare <strong>text</strong> lines in <li>
+            content = re.sub(r'(?<=\n)\s*<strong>([^<]+)</strong>([^<]*)</strong>\s*(?=\n|$)', r'<li><strong>\1</strong>\2</li>', content)
+            
+            # Fix broken list items: <li> with only <strong> — add missing text before
+            content = re.sub(r'<li>\s*<strong>([^<]+)</strong>\s*</li>', r'<li><strong>\1</strong></li>', content)
+            
+            # Wrap consecutive <li> in <ul> if not already
+            li_block = re.findall(r'(<li>.*?</li>(\s*\n)*)+', content)
+            for block in li_block:
+                if not block.strip().startswith('<ul>'):
+                    ul = '<ul>' + block.strip() + '</ul>'
+                    content = content.replace(block.strip(), ul, 1)
+            
+            # Ensure paragraphs: text between tags not in <p> gets wrapped
+            parts = re.split(r'(</?h[23][^>]*>|<img[^>]*>|<ul[^>]*>|</ul>|<li[^>]*>|</li>)', content)
+            result = []
+            in_list = False
+            for part in parts:
+                if re.match(r'<ul', part):
+                    in_list = True
+                    result.append(part)
+                elif part == '</ul>':
+                    in_list = False
+                    result.append(part)
+                elif re.match(r'<li', part) or part == '</li>' or re.match(r'</?h[23]', part) or re.match(r'<img', part):
+                    result.append(part)
+                elif part.strip() and not in_list:
+                    stripped = part.strip()
+                    if stripped and not stripped.startswith('<p>') and not stripped.startswith('<strong>'):
+                        result.append(f'<p>{stripped}</p>')
+                    else:
+                        result.append(part)
+                else:
+                    result.append(part)
+            content = ''.join(result)
+            
             # If no images in output, inject after first <h2>
             if '<img' not in content:
                 first_h2 = re.search(r'(</h2>)', content)
