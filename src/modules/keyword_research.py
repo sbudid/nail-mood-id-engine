@@ -6,7 +6,7 @@ import re
 import requests
 import os
 
-ROUTER_URL = "http://localhost:20128/v1/chat/completions"
+ROUTER_URL = os.environ.get("ROUTER_BASE_URL", "http://43.134.186.23:20128") + "/v1/chat/completions"
 ROUTER_KEY = os.getenv("ROUTER_API_KEY", "sk-6b3ac6ef8e3b70c9-nta99q-76eae469")
 
 @dataclass
