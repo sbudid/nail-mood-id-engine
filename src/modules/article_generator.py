@@ -32,7 +32,6 @@ STOCK_IMAGES = {
 }
 
 
-@dataclass
 def sanitize_article_html(html: str) -> str:
     """Post-process AI-generated HTML for valid Blogger structure.
     Model-agnostic — handles any AI output format.
@@ -98,10 +97,11 @@ def sanitize_article_html(html: str) -> str:
     return html
 
 
+@dataclass
 class Article:
-    title: str
-    content_html: str
-    meta_description: str
+    title: str = ""
+    content_html: str = ""
+    meta_description: str = ""
     required_images: List[dict] = field(default_factory=list)
     faq_items: List[dict] = field(default_factory=list)
     shopee_links: List[dict] = field(default_factory=list)
